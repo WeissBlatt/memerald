@@ -324,7 +324,6 @@ static bool32 sub_81C98D4(void)
 {
     s32 i;
 
-    #ifndef FREE_MATCH_CALL
     for (i = 0; i < REMATCH_TABLE_ENTRIES; i++)
     {
         if (sub_81CB0C8(i) == gMapHeader.regionMapSectionId
@@ -332,7 +331,6 @@ static bool32 sub_81C98D4(void)
             && gSaveBlock1Ptr->trainerRematches[i])
             return TRUE;
     }
-    #endif
 
     return FALSE;
 }

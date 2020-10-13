@@ -6,6 +6,7 @@
 #include "pokemon_size_record.h"
 #include "string_util.h"
 #include "text.h"
+#include "constants/species.h"
 
 #define DEFAULT_MAX_SIZE 0x8000 // was 0x8100 in Ruby/Sapphire
 

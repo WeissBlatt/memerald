@@ -16,6 +16,7 @@
 #include "random.h"
 #include "battle_controllers.h"
 #include "battle_interface.h"
+#include "constants/species.h"
 #include "constants/songs.h"
 #include "constants/trainers.h"
 #include "constants/battle_anim.h"
@@ -3429,11 +3430,7 @@ static void Cmd_getexp(void)
                 item = GetMonData(&gPlayerParty[i], MON_DATA_HELD_ITEM);
 
                 if (item == ITEM_ENIGMA_BERRY)
-                    #ifndef FREE_ENIGMA_BERRY
                     holdEffect = gSaveBlock1Ptr->enigmaBerry.holdEffect;
-                    #else
-                    holdEffect = 0;
-                    #endif
                 else
                     holdEffect = ItemId_GetHoldEffect(item);
 
@@ -3472,11 +3469,7 @@ static void Cmd_getexp(void)
             item = GetMonData(&gPlayerParty[gBattleStruct->expGetterMonId], MON_DATA_HELD_ITEM);
 
             if (item == ITEM_ENIGMA_BERRY)
-                #ifndef FREE_ENIGMA_BERRY
                 holdEffect = gSaveBlock1Ptr->enigmaBerry.holdEffect;
-                #else
-                holdEffect = 0;
-                #endif
             else
                 holdEffect = ItemId_GetHoldEffect(item);
 
@@ -5014,13 +5007,22 @@ bool32 CanBattlerSwitch(u32 battlerId)
 
     if (BATTLE_TWO_VS_ONE_OPPONENT && GetBattlerSide(battlerId) == B_SIDE_OPPONENT)
     {
+        battlerIn1 = GetBattlerAtPosition(B_POSITION_OPPONENT_LEFT);
+        battlerIn2 = GetBattlerAtPosition(B_POSITION_OPPONENT_RIGHT);
+        party = gEnemyParty;
 
-        gBattlescriptCurrInstr = T1_READ_PTR(gBattlescriptCurrInstr + 2);
-        return;
+        for (i = 0; i < PARTY_SIZE; i++)
+        {
+            if (GetMonData(&party[i], MON_DATA_HP) != 0
+             && GetMonData(&party[i], MON_DATA_SPECIES) != SPECIES_NONE
+             && !GetMonData(&party[i], MON_DATA_IS_EGG)
+             && i != gBattlerPartyIndexes[battlerIn1] && i != gBattlerPartyIndexes[battlerIn2])
+                break;
+        }
 
+        ret = (i != PARTY_SIZE);
     }
-
-    if (gBattleTypeFlags & BATTLE_TYPE_INGAME_PARTNER)
+    else if (gBattleTypeFlags & BATTLE_TYPE_INGAME_PARTNER)
     {
         if (GetBattlerSide(battlerId) == B_SIDE_OPPONENT)
             party = gEnemyParty;
@@ -8895,19 +8897,12 @@ static void Cmd_forcerandomswitch(void)
     s32 i;
     s32 battler1PartyId = 0;
     s32 battler2PartyId = 0;
-<<<<<<< HEAD
     s32 lastMonId = 0; // + 1
     s32 firstMonId = 0;
     s32 monsCount = 0;
     struct Pokemon *party = NULL;
-=======
-    s32 firstMonId;
-    s32 lastMonId = 0; // + 1
-    s32 monsCount;
-    struct Pokemon* party = NULL;
->>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31
     s32 validMons = 0;
-    s32 minNeeded;
+    s32 minNeeded = 0;
 
     // Swapping pokemon happens in:
     // trainer battles
@@ -9041,21 +9036,8 @@ static void Cmd_forcerandomswitch(void)
 
             do
             {
-<<<<<<< HEAD
                 i = Random() % monsCount;
                 i += firstMonId;
-=======
-                do
-                {
-                    do
-                    {
-                        i = Random() % monsCount;
-                        i += firstMonId;
-                    } while (i == battler2PartyId || i == battler1PartyId);
-                } while (GetMonData(&party[i], MON_DATA_SPECIES) == SPECIES_NONE
-                       || GetMonData(&party[i], MON_DATA_IS_EGG) == TRUE
-                       || GetMonData(&party[i], MON_DATA_HP) == 0); // Should be one while loop, conjoined by an ||, but that doesn't match. Equivalent logic though
->>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31
             }
             while (i == battler2PartyId
                    || i == battler1PartyId

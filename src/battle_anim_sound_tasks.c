@@ -6,6 +6,7 @@
 #include "sound.h"
 #include "task.h"
 #include "constants/battle_anim.h"
+#include "constants/species.h"
 
 extern struct MusicPlayerInfo gMPlayInfo_SE1;
 

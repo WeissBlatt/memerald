@@ -4,6 +4,7 @@
 #include "palette.h"
 #include "pokemon_icon.h"
 #include "sprite.h"
+#include "constants/species.h"
 
 #define POKE_ICON_BASE_PAL_TAG 56000
 
@@ -24,7 +25,7 @@ static u8 CreateMonIconSprite(struct MonIconSpriteTemplate *, s16, s16, u8);
 
 const u8 *const gMonIconTable[] =
 {
-    [SPECIES_NONE] = gMonIcon_QuestionMark,
+    [SPECIES_NONE] = gMonIcon_Bulbasaur,
     [SPECIES_BULBASAUR] = gMonIcon_Bulbasaur,
     [SPECIES_IVYSAUR] = gMonIcon_Ivysaur,
     [SPECIES_VENUSAUR] = gMonIcon_Venusaur,
@@ -2117,6 +2118,7 @@ void FreeMonIconPalettes(void)
         FreeSpritePaletteByTag(gMonIconPaletteTable[i].tag);
 }
 
+// unused
 void SafeFreeMonIconPalette(u16 species)
 {
     u8 palIndex;

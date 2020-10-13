@@ -1173,47 +1173,75 @@ static void sub_80C5F58(bool8 arg0, bool8 arg1)
 
 static void sub_80C6104(u8 cursorArea, u8 previousCursorArea)
 {
+    bool32 var;
+
     switch (previousCursorArea)
     {
     case CURSOR_AREA_MAP:
         CopyToBgTilemapBufferRect_ChangePalette(1, sPassGfx->unk24, 16, 3, 12, 7, 17);
+        var = TRUE;
         break;
     case CURSOR_AREA_CARD:
         CopyToBgTilemapBufferRect_ChangePalette(1, sPassGfx->unk24 + 336, 16, 10, 12, 7, 17);
+        var = TRUE;
         break;
     case CURSOR_AREA_RECORD:
-        if (sPassData->hasBattleRecord)
+        if (!sPassData->hasBattleRecord)
+        {
+            var = FALSE;
+        }
+        else
+        {
             CopyToBgTilemapBufferRect_ChangePalette(1, sPassGfx->unk28, 2, 10, 12, 3, 17);
-        else if (cursorArea == CURSOR_AREA_NOTHING || cursorArea > CURSOR_AREA_CANCEL)
-            return;
+            var = TRUE;
+        }
         break;
     case CURSOR_AREA_CANCEL:
         CopyToBgTilemapBufferRect_ChangePalette(1, gUnknown_08DE3350, 21, 0, 9, 2, 17);
+        var = TRUE;
         break;
     default:
+        var = FALSE;
+        break;
+    }
+
+    if (!var)
+    {
         if (cursorArea == CURSOR_AREA_NOTHING || cursorArea > CURSOR_AREA_CANCEL)
             return;
-        break;
     }
 
     switch (cursorArea)
     {
     case CURSOR_AREA_MAP:
         CopyToBgTilemapBufferRect_ChangePalette(1, sPassGfx->unk24 + 168, 16, 3, 12, 7, 17);
+        var = TRUE;
         break;
     case CURSOR_AREA_CARD:
         CopyToBgTilemapBufferRect_ChangePalette(1, sPassGfx->unk24 + 504, 16, 10, 12, 7, 17);
+        var = TRUE;
         break;
     case CURSOR_AREA_RECORD:
-        if (sPassData->hasBattleRecord)
-            CopyToBgTilemapBufferRect_ChangePalette(1, sPassGfx->unk28 + 72, 2, 10, 12, 3, 17);
-        else
+        if (!sPassData->hasBattleRecord)
             return;
-        break; // needed
+
+        CopyToBgTilemapBufferRect_ChangePalette(1, sPassGfx->unk28 + 72, 2, 10, 12, 3, 17);
+        var = TRUE;
+        break;
     case CURSOR_AREA_CANCEL:
         CopyToBgTilemapBufferRect_ChangePalette(1, gUnknown_08DE3374, 21, 0, 9, 2, 17);
+        var = TRUE;
         break;
     default:
+        var = FALSE;
+        break;
+    }
+
+    if (!var)
+    {
+        #ifndef NONMATCHING
+            asm("":::"r4");
+        #endif
         if (previousCursorArea == CURSOR_AREA_NOTHING || previousCursorArea > CURSOR_AREA_CANCEL)
             return;
     }

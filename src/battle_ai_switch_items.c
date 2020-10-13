@@ -11,6 +11,7 @@
 #include "constants/item_effects.h"
 #include "constants/items.h"
 #include "constants/moves.h"
+#include "constants/species.h"
 
 // this file's functions
 static bool8 HasSuperEffectiveMoveAgainstOpponents(bool8 noRng);
@@ -822,11 +823,7 @@ static bool8 ShouldUseItem(void)
             continue;
 
         if (item == ITEM_ENIGMA_BERRY)
-            #ifndef FREE_ENIGMA_BERRY
             itemEffects = gSaveBlock1Ptr->enigmaBerry.itemEffect;
-            #else
-            itemEffects = 0;
-            #endif
         else
             itemEffects = gItemEffectTable[item - ITEM_POTION];
 

@@ -16,6 +16,7 @@
 #include "constants/battle_move_effects.h"
 #include "constants/hold_effects.h"
 #include "constants/moves.h"
+#include "constants/species.h"
 
 #define AI_ACTION_DONE          0x0001
 #define AI_ACTION_FLEE          0x0002
@@ -1626,9 +1627,6 @@ static s32 CountUsablePartyMons(u8 battlerId)
 
     if (gBattleTypeFlags & BATTLE_TYPE_DOUBLE)
     {
-
-        u8 position;
-
         battlerOnField1 = gBattlerPartyIndexes[battlerId];
         battlerOnField2 = gBattlerPartyIndexes[GetBattlerAtPosition(GetBattlerPosition(battlerId) ^ BIT_FLANK)];
     }

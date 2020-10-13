@@ -16,6 +16,7 @@
 #include "util.h"
 #include "gpu_regs.h"
 #include "battle_message.h"
+#include "constants/species.h"
 #include "pokedex.h"
 #include "palette.h"
 #include "international_string_util.h"

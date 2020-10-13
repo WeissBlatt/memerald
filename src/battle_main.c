@@ -11,11 +11,9 @@
 #include "battle_scripts.h"
 #include "battle_setup.h"
 #include "battle_tower.h"
-#include "battle_util.h"
 #include "berry.h"
 #include "bg.h"
 #include "data.h"
-#include "dexnav.h"
 #include "decompress.h"
 #include "dma3.h"
 #include "event_data.h"
@@ -61,6 +59,7 @@
 #include "constants/party_menu.h"
 #include "constants/rgb.h"
 #include "constants/songs.h"
+#include "constants/species.h"
 #include "constants/trainers.h"
 #include "cable_club.h"
 
@@ -69,6 +68,11 @@ extern struct MusicPlayerInfo gMPlayInfo_SE2;
 
 extern const struct BgTemplate gBattleBgTemplates[];
 extern const struct WindowTemplate *const gBattleWindowTemplates[];
+extern const u8 *const gBattleScriptsForMoveEffects[];
+extern const u8 *const gBattlescriptsForBallThrow[];
+extern const u8 *const gBattlescriptsForRunningByItem[];
+extern const u8 *const gBattlescriptsForUsingItem[];
+extern const u8 *const gBattlescriptsForSafariActions[];
 
 // this file's functions
 #if !defined(NONMATCHING) && MODERN
@@ -97,6 +101,7 @@ static void SpriteCB_AnimFaintOpponent(struct Sprite *sprite);
 static void SpriteCb_BlinkVisible(struct Sprite *sprite);
 static void SpriteCallbackDummy_3(struct Sprite *sprite);
 static void oac_poke_ally_(struct Sprite *sprite);
+static void SpecialStatusesClear(void);
 static void TurnValuesCleanUp(bool8 var0);
 static void SpriteCB_BounceEffect(struct Sprite *sprite);
 static void BattleStartClearSetData(void);
@@ -119,7 +124,19 @@ static void HandleEndTurn_BattleLost(void);
 static void HandleEndTurn_RanFromBattle(void);
 static void HandleEndTurn_MonFled(void);
 static void HandleEndTurn_FinishBattle(void);
-
+static void HandleAction_UseMove(void);
+static void HandleAction_Switch(void);
+static void HandleAction_UseItem(void);
+static void HandleAction_Run(void);
+static void HandleAction_WatchesCarefully(void);
+static void HandleAction_SafariZoneBallThrow(void);
+static void HandleAction_ThrowPokeblock(void);
+static void HandleAction_GoNear(void);
+static void HandleAction_SafariZoneRun(void);
+static void HandleAction_WallyBallThrow(void);
+static void HandleAction_TryFinish(void);
+static void HandleAction_NothingIsFainted(void);
+static void HandleAction_ActionFinished(void);
 
 // EWRAM vars
 EWRAM_DATA u16 gBattle_BG0_X = 0;
@@ -438,11 +455,9 @@ const u8 * const gStatusConditionStringsTable[7][2] =
     {gStatusConditionString_LoveJpn, gText_Love}
 };
 
-
 static const u8 sPkblToEscapeFactor[][3] = {{0, 0, 0}, {3, 5, 0}, {2, 3, 0}, {1, 2, 0}, {1, 1, 0}};
 static const u8 sGoNearCounterToCatchFactor[] = {4, 3, 2, 1};
 static const u8 sGoNearCounterToEscapeFactor[] = {4, 4, 4, 4};
-
 
 void CB2_InitBattle(void)
 {
@@ -504,16 +519,19 @@ static void CB2_InitBattleInternal(void)
         gBattle_WIN0V = 0x5051;
         ScanlineEffect_Clear();
 
-        for (i = 0; i < 80; i++)
+        i = 0;
+        while (i < 80)
         {
             gScanlineEffectRegBuffers[0][i] = 0xF0;
             gScanlineEffectRegBuffers[1][i] = 0xF0;
+            i++;
         }
 
-        for (; i < 160; i++)
+        while (i < 160)
         {
             gScanlineEffectRegBuffers[0][i] = 0xFF10;
             gScanlineEffectRegBuffers[1][i] = 0xFF10;
+            i++;
         }
 
         ScanlineEffect_SetParams(sIntroScanlineParams16Bit);
@@ -612,7 +630,6 @@ static void SetPlayerBerryDataInBattleStruct(void)
 
     if (IsEnigmaBerryValid() == TRUE)
     {
-        #ifndef FREE_ENIGMA_BERRY
         for (i = 0; i < BERRY_NAME_LENGTH; i++)
             battleBerry->name[i] = gSaveBlock1Ptr->enigmaBerry.berry.name[i];
         battleBerry->name[i] = EOS;
@@ -622,7 +639,6 @@ static void SetPlayerBerryDataInBattleStruct(void)
 
         battleBerry->holdEffect = gSaveBlock1Ptr->enigmaBerry.holdEffect;
         battleBerry->holdEffectParam = gSaveBlock1Ptr->enigmaBerry.holdEffectParam;
-        #endif
     }
     else
     {
@@ -642,13 +658,13 @@ static void SetPlayerBerryDataInBattleStruct(void)
 
 static void SetAllPlayersBerryData(void)
 {
-    s32 i, j;
+    s32 i;
+    s32 j;
 
     if (!(gBattleTypeFlags & BATTLE_TYPE_LINK))
     {
         if (IsEnigmaBerryValid() == TRUE)
         {
-            #ifndef FREE_ENIGMA_BERRY
             for (i = 0; i < BERRY_NAME_LENGTH; i++)
             {
                 gEnigmaBerries[0].name[i] = gSaveBlock1Ptr->enigmaBerry.berry.name[i];
@@ -667,7 +683,6 @@ static void SetAllPlayersBerryData(void)
             gEnigmaBerries[2].holdEffect = gSaveBlock1Ptr->enigmaBerry.holdEffect;
             gEnigmaBerries[0].holdEffectParam = gSaveBlock1Ptr->enigmaBerry.holdEffectParam;
             gEnigmaBerries[2].holdEffectParam = gSaveBlock1Ptr->enigmaBerry.holdEffectParam;
-            #endif
         }
         else
         {
@@ -2553,7 +2568,8 @@ void SpriteCallbackDummy_2(struct Sprite *sprite)
 
 static void sub_80398D0(struct Sprite *sprite)
 {
-    if (--sprite->data[4] == 0)
+    sprite->data[4]--;
+    if (sprite->data[4] == 0)
     {
         sprite->data[4] = 8;
         sprite->invisible ^= 1;
@@ -3244,15 +3260,11 @@ static void DoBattleIntro(void)
                 BattleArena_InitPoints();
         }
 
-
-        if ((gBattleTypeFlags & BATTLE_TYPE_MULTI) && (GetBattlerPosition(gActiveBattler) == B_POSITION_PLAYER_RIGHT || GetBattlerPosition(gActiveBattler) == B_POSITION_OPPONENT_RIGHT))
+        if (gBattleTypeFlags & BATTLE_TYPE_TRAINER)
         {
-            BtlController_EmitDrawTrainerPic(0);
-            MarkBattlerForControllerExec(gActiveBattler);
+            (*state)++;
         }
-
-        if ((gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS) && (GetBattlerPosition(gActiveBattler) == B_POSITION_OPPONENT_RIGHT))
-
+        else // Skip party summary since it is a wild battle.
         {
             if (B_FAST_INTRO)
                 *state = 7; // Don't wait for sprite, print message at the same time.
@@ -3464,255 +3476,7 @@ static void DoBattleIntro(void)
 
 static void TryDoEventsBeforeFirstTurn(void)
 {
-
-    u8 position;
-
-
-    if (gBattleControllerExecFlags)
-        return;
-
-    if (gBattleStruct->switchInAbilitiesCounter == 0)
-    {
-        for (i = 0; i < gBattlersCount; i++)
-            gBattlerByTurnOrder[i] = i;
-        for (i = 0; i < gBattlersCount - 1; i++)
-        {
-            for (j = i + 1; j < gBattlersCount; j++)
-            {
-                if (GetWhoStrikesFirst(gBattlerByTurnOrder[i], gBattlerByTurnOrder[j], TRUE) != 0)
-                    SwapTurnOrder(i, j);
-            }
-        }
-    }
-<<<<<<< HEAD
-    if (!gBattleStruct->overworldWeatherDone
-        && AbilityBattleEffects(0, 0, 0, ABILITYEFFECT_SWITCH_IN_WEATHER, 0) != 0)
-    {
-=======
-    else
-        position = B_POSITION_OPPONENT_LEFT;
-
-    PrepareStringBattle(STRINGID_INTROSENDOUT, GetBattlerAtPosition(position));
-    gBattleMainFunc = BattleIntroOpponent1SendsOutMonAnimation;
-}
-
-static void BattleIntroOpponent2SendsOutMonAnimation(void)
-{
-    u8 position;
-
-    if (!(gBattleTypeFlags & BATTLE_TYPE_RECORDED))
-        position = B_POSITION_OPPONENT_RIGHT;
-    else if (gBattleTypeFlags & BATTLE_TYPE_x2000000)
-    {
-        if (gBattleTypeFlags & BATTLE_TYPE_x80000000)
-            position = B_POSITION_OPPONENT_RIGHT;
-        else
-            position = B_POSITION_PLAYER_RIGHT;
-    }
-    else
-        position = B_POSITION_OPPONENT_RIGHT;
-
-    for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
-    {
-        if (GetBattlerPosition(gActiveBattler) == position)
-        {
-            BtlController_EmitIntroTrainerBallThrow(0);
-            MarkBattlerForControllerExec(gActiveBattler);
-        }
-    }
-
-    gBattleMainFunc = BattleIntroRecordMonsToDex;
-}
-
-static void BattleIntroOpponent1SendsOutMonAnimation(void)
-{
-    u8 position;
-
-    if (gBattleTypeFlags & BATTLE_TYPE_RECORDED)
-    {
-        if (gBattleTypeFlags & BATTLE_TYPE_x2000000)
-        {
-            if (gBattleTypeFlags & BATTLE_TYPE_x80000000)
-                position = B_POSITION_OPPONENT_LEFT;
-            else
-                position = B_POSITION_PLAYER_LEFT;
-        }
-        else
-            position = B_POSITION_OPPONENT_LEFT;
-    }
-    else
-    {
-        position = B_POSITION_OPPONENT_LEFT;
-    }
-
-    if (gBattleControllerExecFlags)
-        return;
-
-    for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
-    {
-        if (GetBattlerPosition(gActiveBattler) == position)
-        {
-            BtlController_EmitIntroTrainerBallThrow(0);
-            MarkBattlerForControllerExec(gActiveBattler);
-            if (gBattleTypeFlags & (BATTLE_TYPE_MULTI | BATTLE_TYPE_TWO_OPPONENTS))
-            {
-                gBattleMainFunc = BattleIntroOpponent2SendsOutMonAnimation;
-                return;
-            }
-        }
-    }
-
-    gBattleMainFunc = BattleIntroRecordMonsToDex;
-}
-
-static void BattleIntroRecordMonsToDex(void)
-{
-    if (gBattleControllerExecFlags == 0)
-    {
-        for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
-        {
-            if (GetBattlerSide(gActiveBattler) == B_SIDE_OPPONENT
-             && !(gBattleTypeFlags & (BATTLE_TYPE_EREADER_TRAINER
-                                      | BATTLE_TYPE_FRONTIER
-                                      | BATTLE_TYPE_LINK
-                                      | BATTLE_TYPE_x2000000
-                                      | BATTLE_TYPE_TRAINER_HILL)))
-            {
-                HandleSetPokedexFlag(SpeciesToNationalPokedexNum(gBattleMons[gActiveBattler].species), FLAG_SET_SEEN, gBattleMons[gActiveBattler].personality);
-            }
-        }
-        gBattleMainFunc = BattleIntroPrintPlayerSendsOut;
-    }
-}
-
-static void sub_803B3AC(void) // unused
-{
-    if (gBattleControllerExecFlags == 0)
-        gBattleMainFunc = BattleIntroPrintPlayerSendsOut;
-}
-
-static void BattleIntroPrintPlayerSendsOut(void)
-{
-    if (gBattleControllerExecFlags == 0)
-    {
-        u8 position;
-
-        if (!(gBattleTypeFlags & BATTLE_TYPE_RECORDED))
-            position = B_POSITION_PLAYER_LEFT;
-        else if (gBattleTypeFlags & BATTLE_TYPE_x2000000)
-        {
-            if (gBattleTypeFlags & BATTLE_TYPE_x80000000)
-                position = B_POSITION_PLAYER_LEFT;
-            else
-                position = B_POSITION_OPPONENT_LEFT;
-        }
-        else
-            position = B_POSITION_PLAYER_LEFT;
-
-        if (!(gBattleTypeFlags & BATTLE_TYPE_SAFARI))
-            PrepareStringBattle(STRINGID_INTROSENDOUT, GetBattlerAtPosition(position));
-
-        gBattleMainFunc = BattleIntroPlayer1SendsOutMonAnimation;
-    }
-}
-
-static void BattleIntroPlayer2SendsOutMonAnimation(void)
-{
-    u8 position;
-
-    if (!(gBattleTypeFlags & BATTLE_TYPE_RECORDED))
-        position = B_POSITION_PLAYER_RIGHT;
-    else if (gBattleTypeFlags & BATTLE_TYPE_x2000000)
-    {
-        if (gBattleTypeFlags & BATTLE_TYPE_x80000000)
-            position = B_POSITION_PLAYER_RIGHT;
-        else
-            position = B_POSITION_OPPONENT_RIGHT;
-    }
-    else
-        position = B_POSITION_PLAYER_RIGHT;
-
-    for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
-    {
-        if (GetBattlerPosition(gActiveBattler) == position)
-        {
-            BtlController_EmitIntroTrainerBallThrow(0);
-            MarkBattlerForControllerExec(gActiveBattler);
-        }
-    }
-
-    gBattleStruct->switchInAbilitiesCounter = 0;
-    gBattleStruct->switchInItemsCounter = 0;
-    gBattleStruct->overworldWeatherDone = FALSE;
-
-    gBattleMainFunc = TryDoEventsBeforeFirstTurn;
-}
-
-static void BattleIntroPlayer1SendsOutMonAnimation(void)
-{
-    u8 position;
-
-    if (!(gBattleTypeFlags & BATTLE_TYPE_RECORDED))
-        position = B_POSITION_PLAYER_LEFT;
-    else if (gBattleTypeFlags & BATTLE_TYPE_x2000000)
-    {
-        if (gBattleTypeFlags & BATTLE_TYPE_x80000000)
-            position = B_POSITION_PLAYER_LEFT;
-        else
-            position = B_POSITION_OPPONENT_LEFT;
-    }
-    else
-        position = B_POSITION_PLAYER_LEFT;
-
-    if (gBattleControllerExecFlags)
-        return;
-
-    for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
-    {
-        if (GetBattlerPosition(gActiveBattler) == position)
-        {
-            BtlController_EmitIntroTrainerBallThrow(0);
-            MarkBattlerForControllerExec(gActiveBattler);
-            if (gBattleTypeFlags & (BATTLE_TYPE_MULTI))
-            {
-                gBattleMainFunc = BattleIntroPlayer2SendsOutMonAnimation;
-                return;
-            }
-        }
-    }
-
-    gBattleStruct->switchInAbilitiesCounter = 0;
-    gBattleStruct->switchInItemsCounter = 0;
-    gBattleStruct->overworldWeatherDone = FALSE;
-
-    gBattleMainFunc = TryDoEventsBeforeFirstTurn;
-}
-
-static void sub_803B598(void) // unused
-{
-    if (gBattleControllerExecFlags == 0)
-    {
-        for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
-        {
-            if (GetBattlerSide(gActiveBattler) == B_SIDE_PLAYER)
-            {
-                BtlController_EmitSwitchInAnim(0, gBattlerPartyIndexes[gActiveBattler], FALSE);
-                MarkBattlerForControllerExec(gActiveBattler);
-            }
-        }
-
-        gBattleStruct->switchInAbilitiesCounter = 0;
-        gBattleStruct->switchInItemsCounter = 0;
-        gBattleStruct->overworldWeatherDone = FALSE;
-
-        gBattleMainFunc = TryDoEventsBeforeFirstTurn;
-    }
-}
-
-static void TryDoEventsBeforeFirstTurn(void)
-{
     s32 i, j;
-    u8 effect = 0;
 
     if (gBattleControllerExecFlags)
         return;
@@ -3733,7 +3497,6 @@ static void TryDoEventsBeforeFirstTurn(void)
     if (!gBattleStruct->overworldWeatherDone
         && AbilityBattleEffects(0, 0, 0, ABILITYEFFECT_SWITCH_IN_WEATHER, 0) != 0)
     {
->>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31
         gBattleStruct->overworldWeatherDone = TRUE;
         return;
     }
@@ -3893,7 +3656,6 @@ u8 IsRunningFromBattleImpossible(void)
 
     gPotentialItemEffectBattler = gActiveBattler;
 
-<<<<<<< HEAD
     if (gBattleTypeFlags & BATTLE_TYPE_FIRST_BATTLE) // Cannot ever run from saving Birch's battle.
     {
         gBattleCommunication[MULTISTRING_CHOOSER] = 1;
@@ -3911,9 +3673,6 @@ u8 IsRunningFromBattleImpossible(void)
     if (gBattleTypeFlags & BATTLE_TYPE_LINK)
         return 0;
     if (gBattleMons[gActiveBattler].ability == ABILITY_RUN_AWAY)
-=======
-    if ((holdEffect == HOLD_EFFECT_CAN_ALWAYS_RUN) || (gBattleTypeFlags & BATTLE_TYPE_LINK) || (gBattleMons[gActiveBattler].ability == ABILITY_RUN_AWAY))
->>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31
         return 0;
 
     if ((i = IsAbilityPreventingEscape(gActiveBattler)))
@@ -4797,7 +4556,7 @@ static void TurnValuesCleanUp(bool8 var0)
     gSideTimers[1].followmeTimer = 0;
 }
 
-void SpecialStatusesClear(void)
+static void SpecialStatusesClear(void)
 {
     memset(&gSpecialStatuses, 0, sizeof(gSpecialStatuses));
 }
@@ -4996,14 +4755,14 @@ static void HandleEndTurn_RanFromBattle(void)
     {
         switch (gProtectStructs[gBattlerAttacker].fleeFlag)
         {
+        default:
+            gBattlescriptCurrInstr = BattleScript_GotAwaySafely;
+            break;
         case 1:
             gBattlescriptCurrInstr = BattleScript_SmokeBallEscape;
             break;
         case 2:
             gBattlescriptCurrInstr = BattleScript_RanAwayUsingMonAbility;
-            break;
-        default:
-            gBattlescriptCurrInstr = BattleScript_GotAwaySafely;
             break;
         }
     }
@@ -5089,30 +4848,17 @@ static void FreeResetData_ReturnToOvOrDoEvolutions(void)
 {
     if (!gPaletteFade.active)
     {
-<<<<<<< HEAD
         gIsFishingEncounter = FALSE;
-=======
-        if (gDexnavBattle && (gBattleOutcome == B_OUTCOME_WON || gBattleOutcome == B_OUTCOME_CAUGHT) && gSaveBlock1Ptr->dexNavChain < 100)
-            gSaveBlock1Ptr->dexNavChain++;
-        else
-            gSaveBlock1Ptr->dexNavChain = 0;
-        
-        gDexnavBattle = FALSE;
->>>>>>> a77b2d502f1c42fc6113fad051d9163560ab59d5
         ResetSpriteData();
         if (gLeveledUpInBattle && (gBattleOutcome == B_OUTCOME_WON || gBattleOutcome == B_OUTCOME_CAUGHT))
         {
             gBattleMainFunc = TryEvolvePokemon;
         }
-<<<<<<< HEAD
         else
         {
             gBattleMainFunc = ReturnFromBattleToOverworld;
             return;
         }
-=======
-        gBattleMainFunc = TryEvolvePokemon;
->>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31
     }
 
     FreeAllWindowBuffers();
@@ -5208,7 +4954,6 @@ void RunBattleScriptCommands(void)
         gBattleScriptingCommandsTable[gBattlescriptCurrInstr[0]]();
 }
 
-<<<<<<< HEAD
 void SetTypeBeforeUsingMove(u16 move, u8 battlerAtk)
 {
     u32 moveType, ateType, attackerAbility;
@@ -5953,5 +5698,3 @@ static void HandleAction_ActionFinished(void)
     gBattleScripting.multihitMoveEffect = 0;
     gBattleResources->battleScriptsStack->size = 0;
 }
-=======
->>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31

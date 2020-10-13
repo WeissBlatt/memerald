@@ -24,6 +24,7 @@
 #include "window.h"
 #include "constants/items.h"
 #include "constants/songs.h"
+#include "constants/species.h"
 
 struct DodrioSubstruct_0160
 {

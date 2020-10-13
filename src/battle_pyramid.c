@@ -35,6 +35,7 @@
 #include "constants/layouts.h"
 #include "constants/maps.h"
 #include "constants/moves.h"
+#include "constants/species.h"
 #include "constants/trainers.h"
 
 extern const struct MapLayout *const gMapLayouts[];

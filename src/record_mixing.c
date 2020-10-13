@@ -5,6 +5,7 @@
 #include "text.h"
 #include "item.h"
 #include "task.h"
+#include "constants/species.h"
 #include "save.h"
 #include "load_save.h"
 #include "pokemon.h"
@@ -712,18 +713,17 @@ static u8 sub_80E7A9C(struct DayCareMail *rmMail)
     return rmMail->message.itemId;
 }
 
-static void ExchangeMail(struct RecordMixingDayCareMail *src, size_t recordSize, u8 (*idxs)[2], u8 which0, u8 which1)
+static void sub_80E7AA4(struct RecordMixingDayCareMail *src, size_t recordSize, u8 (*idxs)[2], u8 which0, u8 which1)
 {
     struct DayCareMail buffer;
     struct RecordMixingDayCareMail *mail1;
     struct RecordMixingDayCareMail *mail2;
 
     mail1 = (void *)src + recordSize * idxs[which0][0];
-    buffer = mail1->mail[idxs[which0][1]];
-
+    memcpy(&buffer, &mail1->mail[idxs[which0][1]], sizeof(struct DayCareMail));
     mail2 = (void *)src + recordSize * idxs[which1][0];
-    mail1->mail[idxs[which0][1]] = mail2->mail[idxs[which1][1]];
-    mail2->mail[idxs[which1][1]] = buffer;
+    memcpy(&mail1->mail[idxs[which0][1]], &mail2->mail[idxs[which1][1]], sizeof(struct DayCareMail));
+    memcpy(&mail2->mail[idxs[which1][1]], &buffer, sizeof(struct DayCareMail));
 }
 
 static void sub_80E7B2C(const u8 *src)
@@ -865,22 +865,27 @@ static void ReceiveDaycareMailData(struct RecordMixingDayCareMail *src, size_t r
         }
         else if (sp1c[i][0] == TRUE && sp1c[i][1] == TRUE)
         {
-            u8 mail1, mail2;
+            u32 var1, var2;
 
             sp24[j][0] = i;
-            mail1 = sub_80E7A9C(&_src->mail[0]);
-            mail2 = sub_80E7A9C(&_src->mail[1]);
-            if (!(mail1 || mail2) || (mail1 && mail2)) //Logical (not bitwise) XOR. Should be ((mail1 || mail2) && !(mail1 && mail2)), but that doesn't match. 
+            var1 = sub_80E7A9C(&_src->mail[0]);
+            var2 = sub_80E7A9C(&_src->mail[1]);
+            if (!var1 && var2)
             {
-                sp24[j][1] = Random2() % 2;
+                #ifndef NONMATCHING
+                    register u8 one asm("r0") = 1; // boo, a fakematch
+                    sp24[j][1] = one;
+                #else
+                    sp24[j][1] = 1;
+                #endif
             }
-            else if (mail1 && !mail2)
+            else if ((var1 && var2) || (!var1 && !var2))
+            {
+                 sp24[j][1] = Random2() % 2;
+            }
+            else if (var1 && !var2)
             {
                 sp24[j][1] = 0;
-            }
-            else if (!mail1 && mail2)
-            {
-                sp24[j][1] = 1;
             }
             j++;
         }
@@ -896,27 +901,27 @@ static void ReceiveDaycareMailData(struct RecordMixingDayCareMail *src, size_t r
     switch (sp34)
     {
     case 2:
-        ExchangeMail(src, recordSize, sp24, 0, 1);
+        sub_80E7AA4(src, recordSize, sp24, 0, 1);
         break;
     case 3:
         which0 = gUnknown_0858CFB8[tableId][0];
         which1 = gUnknown_0858CFB8[tableId][1];
-        ExchangeMail(src, recordSize, sp24, which0, which1);
+        sub_80E7AA4(src, recordSize, sp24, which0, which1);
         break;
     case 4:
         ptr = sp24;
         which0 = gUnknown_0858CFBE[tableId][0];
         which1 = gUnknown_0858CFBE[tableId][1];
-        ExchangeMail(src, recordSize, ptr, which0, which1);
+        sub_80E7AA4(src, recordSize, ptr, which0, which1);
         which0 = gUnknown_0858CFBE[tableId][2];
         which1 = gUnknown_0858CFBE[tableId][3];
-        ExchangeMail(src, recordSize, ptr, which0, which1);
+        sub_80E7AA4(src, recordSize, ptr, which0, which1);
         break;
     }
 
     _src = (void *)src + which * recordSize;
-    gSaveBlock1Ptr->daycare.mons[0].mail = _src->mail[0];
-    gSaveBlock1Ptr->daycare.mons[1].mail = _src->mail[1];
+    memcpy(&gSaveBlock1Ptr->daycare.mons[0].mail, &_src->mail[0], sizeof(struct DayCareMail));
+    memcpy(&gSaveBlock1Ptr->daycare.mons[1].mail, &_src->mail[1], sizeof(struct DayCareMail));
     SeedRng(oldSeed);
 }
 
@@ -1169,7 +1174,6 @@ static void ReceiveApprenticeData(struct Apprentice *mixApprentice, size_t recor
 
 static void sub_80E8578(struct RecordMixingHallRecords *dst, void *hallRecords, size_t recordSize, u32 arg3, s32 linkPlayerCount)
 {
-    #ifndef FREE_RECORD_MIXING_HALL_RECORDS
     s32 i, j, k, l;
     s32 var_68;
 
@@ -1235,7 +1239,6 @@ static void sub_80E8578(struct RecordMixingHallRecords *dst, void *hallRecords, 
                 dst->hallRecords2P[j][k + 3] = gUnknown_03001168[k]->twoPlayers[j];
         }
     }
-    #endif
 }
 
 static void sub_80E8880(struct RankingHall1P *arg0, struct RankingHall1P *arg1)
@@ -1290,7 +1293,6 @@ static void sub_80E88CC(struct RankingHall2P *arg0, struct RankingHall2P *arg1)
 
 static void sub_80E8924(struct RecordMixingHallRecords *arg0)
 {
-    #ifndef FREE_RECORD_MIXING_HALL_RECORDS
     s32 i, j;
 
     for (i = 0; i < HALL_FACILITIES_COUNT; i++)
@@ -1300,12 +1302,10 @@ static void sub_80E8924(struct RecordMixingHallRecords *arg0)
     }
     for (j = 0; j < 2; j++)
         sub_80E88CC(gSaveBlock2Ptr->hallRecords2P[j], arg0->hallRecords2P[j]);
-    #endif
 }
 
 static void ReceiveRankingHallRecords(struct PlayerHallRecords *hallRecords, size_t recordSize, u32 arg2)
 {
-    #ifndef FREE_RECORD_MIXING_HALL_RECORDS
     u8 linkPlayerCount = GetLinkPlayerCount();
     struct RecordMixingHallRecords *largeStructPtr = AllocZeroed(sizeof(struct RecordMixingHallRecords));
 
@@ -1313,7 +1313,6 @@ static void ReceiveRankingHallRecords(struct PlayerHallRecords *hallRecords, siz
     sub_80E8924(largeStructPtr);
 
     Free(largeStructPtr);
-    #endif
 }
 
 static void sub_80E89F8(struct RecordMixingDayCareMail *dst)

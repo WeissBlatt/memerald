@@ -126,12 +126,12 @@ struct Pokemon
 
 struct Unknown_806F160_Struct
 {
-    u32 field_0_0:4;
-    u32 field_0_1:4;
-    u32 field_1:8;
-    u16 magic:8;
-    u32 size:4;
-    u16 field_3_1:4;
+    u8 field_0_0:4;
+    u8 field_0_1:4;
+    u8 field_1;
+    u8 magic;
+    u8 field_3_0:4;
+    u8 field_3_1:4;
     void *bytes;
     u8 **byteArrays;
     struct SpriteTemplate *templates;
@@ -206,8 +206,7 @@ struct BaseStats
  /* 0x19 */ u8 safariZoneFleeRate;
  /* 0x1A */ u8 bodyColor : 7;
             u8 noFlip : 1;
- /* 0x1A */ u8 abilityHidden;
-}; /* size = 28 */
+};
 
 struct BattleMove
 {
