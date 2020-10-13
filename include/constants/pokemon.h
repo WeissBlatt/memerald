@@ -241,6 +241,7 @@
 #define UNOWN_FORM_COUNT 28
 
 // Battle move flags
+
 #define FLAG_MAKES_CONTACT          0x1
 #define FLAG_PROTECT_AFFECTED       0x2
 #define FLAG_MAGICCOAT_AFFECTED     0x4
@@ -271,6 +272,14 @@
 #define SPLIT_SPECIAL   0x1
 #define SPLIT_STATUS    0x2
 
+#define FLAG_MAKES_CONTACT          (1 << 0)
+#define FLAG_PROTECT_AFFECTED       (1 << 1)
+#define FLAG_MAGICCOAT_AFFECTED     (1 << 2)
+#define FLAG_SNATCH_AFFECTED        (1 << 3)
+#define FLAG_MIRROR_MOVE_AFFECTED   (1 << 4)
+#define FLAG_KINGSROCK_AFFECTED     (1 << 5)
+
+
 // Growth rates
 #define GROWTH_MEDIUM_FAST  0
 #define GROWTH_ERRATIC      1
@@ -293,6 +302,7 @@
 
 #define F_SUMMARY_SCREEN_FLIP_SPRITE 0x80
 
+<<<<<<< HEAD
 // Evolution type flags
 #define EVO_MEGA_EVOLUTION   0xffff // Not an actual evolution, used to temporarily mega evolve in battle.
 #define EVO_FRIENDSHIP       0x0001 // Pokémon levels up with friendship ≥ 220
@@ -325,6 +335,24 @@
 #define EVO_LEVEL_RAIN       0x001C // Pokémon reaches the specified level while it's raining
 #define EVO_SPECIFIC_MON_IN_PARTY  0x001D // Pokémon levels up with a specified Pokémon in party
 #define EVO_LEVEL_DARK_TYPE_MON_IN_PARTY  0x001E // Pokémon reaches the specified level with a Dark Type Pokémon in party
+=======
+// Evolution types
+#define EVO_FRIENDSHIP       1  // Pokémon levels up with friendship ≥ 220
+#define EVO_FRIENDSHIP_DAY   2  // Pokémon levels up during the day with friendship ≥ 220
+#define EVO_FRIENDSHIP_NIGHT 3  // Pokémon levels up at night with friendship ≥ 220
+#define EVO_LEVEL            4  // Pokémon reaches the specified level
+#define EVO_TRADE            5  // Pokémon is traded
+#define EVO_TRADE_ITEM       6  // Pokémon is traded while it's holding the specified item
+#define EVO_ITEM             7  // specified item is used on Pokémon
+#define EVO_LEVEL_ATK_GT_DEF 8  // Pokémon reaches the specified level with attack > defense
+#define EVO_LEVEL_ATK_EQ_DEF 9  // Pokémon reaches the specified level with attack = defense
+#define EVO_LEVEL_ATK_LT_DEF 10 // Pokémon reaches the specified level with attack < defense
+#define EVO_LEVEL_SILCOON    11 // Pokémon reaches the specified level with a Silcoon personality value
+#define EVO_LEVEL_CASCOON    12 // Pokémon reaches the specified level with a Cascoon personality value
+#define EVO_LEVEL_NINJASK    13 // Pokémon reaches the specified level (special value for Ninjask)
+#define EVO_LEVEL_SHEDINJA   14 // Pokémon reaches the specified level (special value for Shedinja)
+#define EVO_BEAUTY           15 // Pokémon levels up with beauty ≥ specified value
+>>>>>>> a77b2d502f1c42fc6113fad051d9163560ab59d5
 
 #define EVOS_PER_MON 8
 

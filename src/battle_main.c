@@ -15,6 +15,7 @@
 #include "berry.h"
 #include "bg.h"
 #include "data.h"
+#include "dexnav.h"
 #include "decompress.h"
 #include "dma3.h"
 #include "event_data.h"
@@ -3463,11 +3464,9 @@ static void DoBattleIntro(void)
 
 static void TryDoEventsBeforeFirstTurn(void)
 {
-<<<<<<< HEAD
-    s32 i, j;
-=======
+
     u8 position;
->>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31
+
 
     if (gBattleControllerExecFlags)
         return;
@@ -5090,7 +5089,16 @@ static void FreeResetData_ReturnToOvOrDoEvolutions(void)
 {
     if (!gPaletteFade.active)
     {
+<<<<<<< HEAD
         gIsFishingEncounter = FALSE;
+=======
+        if (gDexnavBattle && (gBattleOutcome == B_OUTCOME_WON || gBattleOutcome == B_OUTCOME_CAUGHT) && gSaveBlock1Ptr->dexNavChain < 100)
+            gSaveBlock1Ptr->dexNavChain++;
+        else
+            gSaveBlock1Ptr->dexNavChain = 0;
+        
+        gDexnavBattle = FALSE;
+>>>>>>> a77b2d502f1c42fc6113fad051d9163560ab59d5
         ResetSpriteData();
         if (gLeveledUpInBattle && (gBattleOutcome == B_OUTCOME_WON || gBattleOutcome == B_OUTCOME_CAUGHT))
         {
