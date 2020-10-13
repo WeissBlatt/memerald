@@ -28,7 +28,6 @@
 #include "window.h"
 #include "constants/rgb.h"
 #include "constants/songs.h"
-#include "constants/species.h"
 
 enum
 {
@@ -1515,8 +1514,14 @@ void ResetPokedex(void)
     DisableNationalPokedex();
     for (i = 0; i < DEX_FLAGS_NO; i++)
     {
-        gSaveBlock1Ptr->dexCaught[i] = 0;
-        gSaveBlock1Ptr->dexSeen[i] = 0;
+
+        gSaveBlock2Ptr->pokedex.owned[i] = 0;
+        gSaveBlock2Ptr->pokedex.seen[i] = 0;
+        #ifndef FREE_EXTRA_SEEN_FLAGS
+        gSaveBlock1Ptr->seen1[i] = 0;
+        gSaveBlock1Ptr->seen2[i] = 0;
+        #endif
+
     }
 }
 
@@ -4165,21 +4170,18 @@ static void PrintMonHeight(u16 height, u8 left, u8 top)
 
 static void PrintMonWeight(u16 weight, u8 left, u8 top)
 {
-#ifndef NONMATCHING
-    asm("":::"r9");
-{
-#endif
     u8 buffer[16];
+    u8 i;
     bool8 output;
-    u8 i = 0;
     u32 lbs = (weight * 100000) / 4536;
 
     if (lbs % 10u >= 5)
         lbs += 10;
+
+    i = 0;
     output = FALSE;
 
-    buffer[i] = (lbs / 100000) + CHAR_0;
-    if (buffer[i] == CHAR_0)
+    if ((buffer[i] = (lbs / 100000) + CHAR_0) == CHAR_0 && !output)
     {
         buffer[i++] = 0x77;
     }
@@ -4190,8 +4192,7 @@ static void PrintMonWeight(u16 weight, u8 left, u8 top)
     }
 
     lbs %= 100000;
-    buffer[i] = (lbs / 10000) + CHAR_0;
-    if (buffer[i] == CHAR_0 && !output)
+    if ((buffer[i] = (lbs / 10000) + CHAR_0) == CHAR_0 && !output)
     {
         buffer[i++] = 0x77;
     }
@@ -4202,13 +4203,13 @@ static void PrintMonWeight(u16 weight, u8 left, u8 top)
     }
 
     lbs %= 10000;
-    buffer[i] = (lbs / 1000) + CHAR_0;
-    if (buffer[i] == CHAR_0 && !output)
+    if ((buffer[i] = (lbs / 1000) + CHAR_0) == CHAR_0 && !output)
     {
         buffer[i++] = 0x77;
     }
     else
     {
+        output = TRUE;
         i++;
     }
 
@@ -4224,9 +4225,6 @@ static void PrintMonWeight(u16 weight, u8 left, u8 top)
     buffer[i++] = CHAR_PERIOD;
     buffer[i++] = EOS;
     PrintInfoScreenText(buffer, left, top);
-#ifndef NONMATCHING
-}
-#endif
 }
 
 const u8 *GetPokedexCategoryName(u16 dexNum) // unused
@@ -4234,13 +4232,19 @@ const u8 *GetPokedexCategoryName(u16 dexNum) // unused
     return gPokedexEntries[dexNum].categoryName;
 }
 
+enum
+{
+    HEIGHT,
+    WEIGHT,
+};
+
 u16 GetPokedexHeightWeight(u16 dexNum, u8 data)
 {
     switch (data)
     {
-    case 0:  // height
+    case HEIGHT:
         return gPokedexEntries[dexNum].height;
-    case 1:  // weight
+    case WEIGHT:
         return gPokedexEntries[dexNum].weight;
     default:
         return 1;
@@ -4260,6 +4264,7 @@ s8 GetSetPokedexFlag(u16 nationalDexNo, u8 caseID)
     switch (caseID)
     {
     case FLAG_GET_SEEN:
+<<<<<<< HEAD
         retVal = ((gSaveBlock1Ptr->dexSeen[index] & mask) != 0);
         break;
     case FLAG_GET_CAUGHT:
@@ -4267,6 +4272,53 @@ s8 GetSetPokedexFlag(u16 nationalDexNo, u8 caseID)
         break;
     case FLAG_SET_SEEN:
         gSaveBlock1Ptr->dexSeen[index] |= mask;
+=======
+        if (gSaveBlock2Ptr->pokedex.seen[index] & mask)
+        {
+            #ifndef FREE_EXTRA_SEEN_FLAGS
+            if ((gSaveBlock2Ptr->pokedex.seen[index] & mask) == (gSaveBlock1Ptr->seen1[index] & mask)
+             && (gSaveBlock2Ptr->pokedex.seen[index] & mask) == (gSaveBlock1Ptr->seen2[index] & mask))
+                retVal = 1;
+            else
+            {
+                gSaveBlock2Ptr->pokedex.seen[index] &= ~mask;
+                gSaveBlock1Ptr->seen1[index] &= ~mask;
+                gSaveBlock1Ptr->seen2[index] &= ~mask;
+                retVal = 0;
+            }
+            #else
+                retVal = 1;
+            #endif
+        }
+        break;
+    case FLAG_GET_CAUGHT:
+        if (gSaveBlock2Ptr->pokedex.owned[index] & mask)
+        {
+            #ifndef FREE_EXTRA_SEEN_FLAGS
+            if ((gSaveBlock2Ptr->pokedex.owned[index] & mask) == (gSaveBlock2Ptr->pokedex.seen[index] & mask)
+             && (gSaveBlock2Ptr->pokedex.owned[index] & mask) == (gSaveBlock1Ptr->seen1[index] & mask)
+             && (gSaveBlock2Ptr->pokedex.owned[index] & mask) == (gSaveBlock1Ptr->seen2[index] & mask))
+                retVal = 1;
+            else
+            {
+                gSaveBlock2Ptr->pokedex.owned[index] &= ~mask;
+                gSaveBlock2Ptr->pokedex.seen[index] &= ~mask;
+                gSaveBlock1Ptr->seen1[index] &= ~mask;
+                gSaveBlock1Ptr->seen2[index] &= ~mask;
+                retVal = 0;
+            }
+            #else
+                retVal = 1;
+            #endif
+        }
+        break;
+    case FLAG_SET_SEEN:
+        gSaveBlock2Ptr->pokedex.seen[index] |= mask;
+        #ifndef FREE_EXTRA_SEEN_FLAGS
+        gSaveBlock1Ptr->seen1[index] |= mask;
+        gSaveBlock1Ptr->seen2[index] |= mask;
+        #endif
+>>>>>>> 5ad750e296b4e9a1ca952c3b5886247f32ae0a31
         break;
     case FLAG_SET_CAUGHT:
         gSaveBlock1Ptr->dexCaught[index] |= mask;
@@ -5423,8 +5475,8 @@ static void PrintSearchParameterText(u8 taskId)
     const struct SearchOptionText *texts = sSearchOptions[gTasks[taskId].tMenuItem].texts;
     const u16 *cursorPos = &gTasks[taskId].data[sSearchOptions[gTasks[taskId].tMenuItem].taskDataCursorPos];
     const u16 *scrollOffset = &gTasks[taskId].data[sSearchOptions[gTasks[taskId].tMenuItem].taskDataScrollOffset];
-    u16 i;
-    u16 j;
+
+    u16 i, j;
 
     ClearSearchParameterBoxText();
 
@@ -5513,8 +5565,7 @@ static bool8 SearchParamCantScrollUp(u8 taskId)
 
     if (lastOption > MAX_SEARCH_PARAM_CURSOR_POS && *scrollOffset != 0)
         return FALSE;
-    else
-        return TRUE;
+    return TRUE;
 }
 
 static bool8 SearchParamCantScrollDown(u8 taskId)
@@ -5525,8 +5576,7 @@ static bool8 SearchParamCantScrollDown(u8 taskId)
 
     if (lastOption > MAX_SEARCH_PARAM_CURSOR_POS && *scrollOffset < lastOption - MAX_SEARCH_PARAM_CURSOR_POS)
         return FALSE;
-    else
-        return TRUE;
+    return TRUE;
 }
 
 #define sTaskId      data[0]
