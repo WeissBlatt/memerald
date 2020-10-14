@@ -1626,8 +1626,7 @@ static void Task_HandleInput(u8 taskId)
             PlaySE(SE_SELECT);
             BeginCloseSummaryScreen(taskId);
         }
-    }
-	// show IVs/EVs/stats on button presses
+			// show IVs/EVs/stats on button presses
 else if (gMain.newKeys & R_BUTTON)
 {
     if (sMonSummaryScreen->currPageIndex == PSS_PAGE_SKILLS)
@@ -1649,6 +1648,8 @@ else if (gMain.newKeys & START_BUTTON)
         BufferIvOrEvStats(2);
     }
 }
+    }
+
 }
 
 static void ChangeSummaryPokemon(u8 taskId, s8 delta)
