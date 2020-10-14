@@ -3470,7 +3470,7 @@ static void BufferLeftColumnStats(void)
     Free(defenseString);
 }
 
-sstatic void PrintLeftColumnStats(void)
+static void PrintLeftColumnStats(void)
 {
     PrintTextOnWindow(AddWindowFromTemplateList(sPageSkillsTemplate, PSS_DATA_WINDOW_SKILLS_STATS_LEFT), gStringVar4, 4, 1, 0, 0);
 }
