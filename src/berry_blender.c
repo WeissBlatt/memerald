@@ -297,7 +297,8 @@ static const u8 sText_NewLine[] = _("\n");
 static const u8 sText_Space[] = _(" ");
 static const u8 sText_Ranking[] = _("RANKING");
 static const u8 sText_TheLevelIs[] = _("The level is ");
-static const u8 sText_TheFeelIs[] = _(", and the feel is ");
+static const u8 sText_TheFeelIs[] = _("");
+//static const u8 sText_TheFeelIs[] = _(", and the feel is ");
 static const u8 sText_Dot2[] = _(".");
 
 static const struct BgTemplate sBgTemplates[3] =
@@ -2451,7 +2452,7 @@ static void CalculatePokeblock(struct BlenderBerry *berries, struct Pokeblock *p
 
     // Calculate color and feel of pokeblock
     pokeblock->color = CalculatePokeblockColor(berries, &sPokeblockFlavors[0], numPlayers, numNegatives);
-    sPokeblockFlavors[FLAVOR_COUNT] = 1;
+    sPokeblockFlavors[FLAVOR_COUNT] = 0;
 
     if (sPokeblockFlavors[FLAVOR_COUNT] < 0)
         sPokeblockFlavors[FLAVOR_COUNT] = 0;
@@ -3603,8 +3604,8 @@ static void PrintMadePokeblockString(struct Pokeblock *pokeblock, u8 *dst)
     StringAppend(dst, text);
 
     StringAppend(dst, sText_TheFeelIs);
-    ConvertIntToDecimalStringN(text, feel, STR_CONV_MODE_LEFT_ALIGN, 3);
-    StringAppend(dst, text);
+    //ConvertIntToDecimalStringN(text, feel, STR_CONV_MODE_LEFT_ALIGN, 3);
+    //StringAppend(dst, text);
 
     StringAppend(dst, sText_Dot2);
     StringAppend(dst, sText_NewParagraph);
